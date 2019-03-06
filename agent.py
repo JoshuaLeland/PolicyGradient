@@ -149,14 +149,10 @@ class Agent(object):
 		#rescale the output from the nn_baseline to match the statistics
         # (mean and std) of the current batch of Q-values.
         # This trick is from Berkley course.
+        # UPDATE: I removed this because it was breaking something with training.
+        # Will comeback to fix this later.
 		if self.nn_baseline:
 			b_n = self.baseline(ob_no).view(-1).detach()
-			if b_n.std() < 1e-6:
-				std = 1
-			else:
-				std = b_n.std()
-			b_n = (b_n - b_n.mean())/std
-			b_n = b_n*q_n.std() + q_n.mean()
 			adv_n = q_n - b_n
 		else:
 			adv_n = q_n.clone()
@@ -177,11 +173,10 @@ class Agent(object):
 		#Update baseline estimator here.
 		if self.nn_baseline:
 			self.optimizer_bl.zero_grad()
-			#Rescale to have mean = 0 and std = 1
+			#Berkley Rescales to have mean = 0 and std = 1
 			#self.baseline.train()
-			target_n = (q_n - q_n.mean())/q_n.std()
 			bl = self.baseline(ob_no)
-			bl_loss = self.baseline_loss(bl, target_n)
+			bl_loss = self.baseline_loss(q_n, bl)
 			bl_loss.backward()
 			self.optimizer_bl.step()
 
