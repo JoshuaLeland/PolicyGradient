@@ -153,7 +153,11 @@ class Agent(object):
         # Will comeback to fix this later.
 		if self.nn_baseline:
 			b_n = self.baseline(ob_no).view(-1).detach()
-			adv_n = q_n - b_n
+			#Scale b_n
+			q_n_m = q_n.mean().detach()
+			q_n_std = q_n.std().detach()
+			b_n_s = b_n*q_n_std + q_n_m
+			adv_n = q_n - b_n_s
 		else:
 			adv_n = q_n.clone()
 		return adv_n
@@ -173,10 +177,13 @@ class Agent(object):
 		#Update baseline estimator here.
 		if self.nn_baseline:
 			self.optimizer_bl.zero_grad()
-			#Berkley Rescales to have mean = 0 and std = 1
+			#Berkley Rescales q_n to have mean = 0 and std = 1
+			q_n_m = q_n.mean().detach()
+			q_n_std = q_n.std().detach()
+			q_n_n = (q_n.detach() - q_n_m) / q_n_std
 			#self.baseline.train()
 			bl = self.baseline(ob_no)
-			bl_loss = self.baseline_loss(q_n, bl)
+			bl_loss = self.baseline_loss(q_n_n, bl)
 			bl_loss.backward()
 			self.optimizer_bl.step()
 
